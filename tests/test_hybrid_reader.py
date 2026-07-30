@@ -24,5 +24,5 @@ class TestHybridReader:
             reader.read(fake)
 
     def test_fallback_threshold_parameter(self) -> None:
-        reader = HybridReader(fallback_threshold=500)
-        assert reader._fallback_threshold == 500
+        reader = HybridReader(fallback_chars_per_page=500)
+        assert reader._fallback_chars_per_page == 500

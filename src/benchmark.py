@@ -5,6 +5,8 @@ from __future__ import annotations
 import difflib
 import importlib
 import json
+import platform
+import subprocess
 import time
 from pathlib import Path
 from typing import Any
@@ -77,6 +79,70 @@ _PKG_MAP: dict[str, list[str]] = {
 }
 
 
+# ── Hardware detection ──────────────────────────────────────────────
+
+def detect_hardware() -> dict[str, str]:
+    """Detect CPU and GPU hardware for benchmark context.
+
+    Returns:
+        Dict with os, cpu, gpu, and python_version keys.
+    """
+    info: dict[str, str] = {
+        "os": f"{platform.system()} {platform.release()}",
+        "cpu": platform.processor() if callable(platform.processor) else (platform.processor or "unknown"),  # noqa: E501
+        "gpu": "none",
+        "python_version": platform.python_version(),
+    }
+
+    # Try nvidia-smi for GPU detection
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            info["gpu"] = result.stdout.strip().split("\n")[0].strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    # Fallback: try torch CUDA detection
+    if info["gpu"] == "none":
+        try:
+            import torch  # noqa: PLC0415
+            if torch.cuda.is_available():
+                info["gpu"] = torch.cuda.get_device_name(0)
+        except ImportError:
+            pass
+
+    return info
+
+
+def print_hardware() -> dict[str, str]:
+    """Print hardware info and return it."""
+    info = detect_hardware()
+    print(f"\n  Hardware: {info['os']}")
+    print(f"  CPU: {info['cpu']}")
+    print(f"  GPU: {info['gpu']}")
+    print(f"  Python: {info['python_version']}")
+    return info
+
+
+# ── Page count helper ────────────────────────────────────────────────
+
+def count_pages(file_path: Path) -> int:
+    """Count pages in a PDF using pymupdf."""
+    try:
+        import fitz  # noqa: PLC0415
+        doc = fitz.open(str(file_path))
+        count = len(doc)
+        doc.close()
+        return count
+    except Exception:
+        return 0
+
+
+# ── Format helpers ───────────────────────────────────────────────────
+
 def _detect_format(file_path: Path) -> str:
     """Detect document format from extension."""
     ext = file_path.suffix.lower()
@@ -126,7 +192,6 @@ def create_reader(
 
 # ── Timing ───────────────────────────────────────────────────────────
 
-
 def read_timed(
     reader: ReaderProtocol, file_path: str | Path
 ) -> tuple[str, float]:
@@ -142,7 +207,6 @@ def read_timed(
 
 
 # ── Comparison helpers ───────────────────────────────────────────────
-
 
 def unified_diff(a: str, b: str, label_a: str, label_b: str) -> str:
     """Return a unified diff string between two texts."""
@@ -192,7 +256,6 @@ def word_stats(
 
 # ── Result export ────────────────────────────────────────────────────
 
-
 def _results_dir() -> Path:
     """Return the results directory, creating it if needed."""
     d = Path("results")
@@ -233,8 +296,132 @@ def export_json(
     return out
 
 
-# ── Single-file benchmark ───────────────────────────────────────────
+# ── Markdown report generation ──────────────────────────────────────
 
+def _fmt_time(s: float) -> str:
+    """Format seconds as human-readable duration."""
+    if s < 60:
+        return f"{s:.1f}s"
+    return f"{s / 60:.1f}m"
+
+
+def generate_markdown_report(
+    all_results: list[dict[str, Any]],
+    all_names: list[str],
+    totals: dict[str, float],
+    hardware: dict[str, str],
+    directory: str,
+) -> Path:
+    """Generate a markdown benchmark report.
+
+    Args:
+        all_results: Per-file results from run_batch.
+        all_names: List of reader method names.
+        totals: Total time per method.
+        hardware: Hardware info from detect_hardware().
+        directory: Source directory of documents.
+
+    Returns:
+        Path to the generated .md file.
+    """
+    lines: list[str] = []
+    a = lines.append
+
+    a("# Benchmark Report")
+    a("")
+    a(f"**Generated:** {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    a(f"**Documents:** {len(all_results)} files from `{directory}`")
+    a(f"**Methods:** {', '.join(all_names)}")
+    a("")
+    a("## Hardware")
+    a("")
+    a(f"| Component | Detail |")
+    a(f"|-----------|--------|")
+    a(f"| OS | {hardware['os']} |")
+    a(f"| CPU | {hardware['cpu']} |")
+    a(f"| GPU | {hardware['gpu']} |")
+    a(f"| Python | {hardware['python_version']} |")
+    a("")
+
+    # Speed table
+    a("## Speed Comparison")
+    a("")
+    a("| File | Pages | Method | Time | Chars | Chars/sec |")
+    a("|------|-------|--------|------|-------|-----------|")
+
+    for fr in all_results:
+        fname = fr["file"]
+        file_path = Path(directory) / fname
+        pages = count_pages(file_path) if file_path.suffix.lower() == ".pdf" else 1
+        for m in all_names:
+            r = fr["readers"].get(m, {})
+            if not r or "error" in r:
+                continue
+            t = r["time_s"]
+            chars = r["chars"]
+            cps = chars / t if t > 0 else 0
+            a(f"| {fname} | {pages} | {m} | {_fmt_time(t)} | {chars:,} | {cps:,.0f} |")
+
+    a("")
+
+    # Total time table
+    a("## Total Time (All Files)")
+    a("")
+    active_totals = {m: t for m, t in totals.items() if t > 0}
+    if active_totals:
+        fastest = min(active_totals, key=lambda k: active_totals[k])
+        ft = active_totals[fastest]
+        a("| Method | Total Time | Ratio vs Fastest |")
+        a("|--------|-----------|------------------|")
+        for m in sorted(active_totals, key=lambda k: active_totals[k]):
+            ratio = active_totals[m] / ft if ft > 0 else float("inf")
+            a(f"| {m} | {_fmt_time(active_totals[m])} | {ratio:.1f}x |")
+        a("")
+        a(f"**Fastest overall:** `{fastest}` ({_fmt_time(ft)})")
+        a("")
+
+    # Quality table
+    a("## Quality Summary (Characters Extracted)")
+    a("")
+    a("| File | Method | Chars | Words | Status |")
+    a("|------|--------|-------|-------|--------|")
+    for fr in all_results:
+        for m in all_names:
+            r = fr["readers"].get(m, {})
+            if not r or "error" in r:
+                status = "ERROR" if r else "-"
+                a(f"| {fr['file']} | {m} | - | - | {status} |")
+            else:
+                chars = r["chars"]
+                words = r.get("words", 0)
+                status = "scanned" if chars < 50 else "ok"
+                a(f"| {fr['file']} | {m} | {chars:,} | {words:,} | {status} |")
+
+    a("")
+
+    # Failure analysis
+    failures: list[str] = []
+    for fr in all_results:
+        for m in all_names:
+            r = fr["readers"].get(m, {})
+            if r and "chars" in r and 0 < r["chars"] < 50:
+                failures.append(f"- `{fr['file']}` with `{m}`: only {r['chars']} chars (scanned doc)")
+            elif r and "error" in r:
+                failures.append(f"- `{fr['file']}` with `{m}`: crashed")
+
+    if failures:
+        a("## Failures (Near-Empty Output or Crashes)")
+        a("")
+        for f in failures:
+            a(f)
+        a("")
+
+    out = _results_dir() / "benchmark_report.md"
+    out.write_text("\n".join(lines), encoding="utf-8")
+    return out
+
+
+# ── Single-file benchmark ───────────────────────────────────────────
 
 def run_single(
     file_path: str | Path,
@@ -256,6 +443,8 @@ def run_single(
     if not avail:
         print("No readers available. Install at least one package.")
         return
+
+    print_hardware()
 
     print(f"\n{'='*72}")
     print(f"  File: {file_path.name}")
@@ -337,7 +526,6 @@ def run_single(
 
 # ── Batch benchmark ─────────────────────────────────────────────────
 
-
 def run_batch(
     directory: str | Path,
     tesseract_cmd: str | None = None,
@@ -374,6 +562,9 @@ def run_batch(
     pdf_names = list(reader_instances["pdf"])
     img_names = list(reader_instances["image"])
     all_names = pdf_names + img_names
+
+    # Hardware header
+    hardware = print_hardware()
 
     # Build header
     col_w = 12
@@ -469,15 +660,21 @@ def run_batch(
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "totals": {m: round(totals[m], 3) for m in all_names},
         "fastest": min(active_totals, key=lambda k: active_totals[k]) if active_totals else None,
+        "hardware": hardware,
         "results": all_results,
     }
     out.write_text(json.dumps(batch_data, indent=2), encoding="utf-8")
-    print(f"\n  Results saved to {out}")
+    print(f"\n  JSON results saved to {out}")
+
+    # ── Generate markdown report ───────────────────────────────────
+    report_path = generate_markdown_report(
+        all_results, all_names, totals, hardware, str(directory)
+    )
+    print(f"  Markdown report saved to {report_path}")
     print()
 
 
 # ── CLI ──────────────────────────────────────────────────────────────
-
 
 def main() -> None:
     """CLI entry-point.
