@@ -1,0 +1,26 @@
+[tool.mypy]
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+strict_optional = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+
+# Third-party packages without type stubs
+[[tool.mypy.overrides]]
+module = [
+    "pytesseract",
+    "pdf2image",
+    "fitz",
+    "pdfplumber",
+    "docling.*",
+    "unstructured.*",
+]
+ignore_missing_imports = true

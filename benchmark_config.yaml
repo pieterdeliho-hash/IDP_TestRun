@@ -1,0 +1,11 @@
+# Benchmark configuration
+hybrid:
+  fallback_threshold: 100  # chars below which docling is used
+
+output:
+  export_json: true        # save results to results/ directory
+  export_csv: false        # optional CSV export
+  diff_lines: 20           # max diff lines shown per comparison
+
+batch:
+  include_quality: true    # show quality metrics in batch mode

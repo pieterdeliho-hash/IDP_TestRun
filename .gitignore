@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project outputs
+output/
+results/
+
+# Test fixtures (real-world PDFs)
+tests/fixtures/
+
+# Notebooks and temp scripts
+*.ipynb
+tmp_*.py
+verify_readme.py
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
