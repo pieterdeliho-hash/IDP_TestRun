@@ -10,11 +10,12 @@ from src.utils import validate_pdf_path
 class PyMuPDFReader:
     """Reads text from PDFs using PyMuPDF (fitz)."""
 
-    def read(self, file_path: str | Path) -> str:
+    def read(self, file_path: str | Path, *, use_ocr: bool = True) -> str:
         """Read a PDF and return its full text content.
 
         Args:
             file_path: Path to the PDF.
+            use_ocr:   Reserved for protocol compatibility (unused here).
 
         Returns:
             The extracted text, pages separated by blank lines.

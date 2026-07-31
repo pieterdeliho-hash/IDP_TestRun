@@ -10,7 +10,7 @@ from typing import Protocol
 class ReaderProtocol(Protocol):
     """Protocol shared by all document reader classes."""
 
-    def read(self, file_path: str | Path) -> str: ...
+    def read(self, file_path: str | Path, *, use_ocr: bool = True) -> str: ...
 
 
 # ── Supported formats ────────────────────────────────────────────────
@@ -39,7 +39,7 @@ def _ensure_native_tools_on_path() -> None:
     ]
 
     # Poppler — winget (oschwartz10612), version-agnostic
-    base = Path(r"C:\Users\Pieter\AppData\Local\Microsoft\WinGet\Packages")
+    base = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages"
     if base.is_dir():
         for pkg in base.iterdir():
             if not pkg.name.startswith("oschwartz10612.Poppler"):
@@ -163,6 +163,69 @@ def find_documents(
     for pattern in patterns:
         found.update(dir_path.glob(pattern))
     return sorted(found, key=lambda p: p.name)
+
+
+# ── Marker config helper ─────────────────────────────────────────────
+
+
+def _get_docling_converter() -> object:
+    """Return a singleton DocumentConverter with GPU acceleration if available."""
+    if not hasattr(_get_docling_converter, "_instance"):
+        import torch  # noqa: PLC0415
+
+        from docling.datamodel.accelerator_options import AcceleratorOptions
+        from docling.datamodel.base_models import InputFormat
+        from docling.datamodel.pipeline_options import PdfPipelineOptions
+        from docling.document_converter import DocumentConverter, PdfFormatOption
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        acc = AcceleratorOptions(device=device)
+        pipe = PdfPipelineOptions(accelerator_options=acc)
+
+        _get_docling_converter._instance = DocumentConverter(  # type: ignore[attr-defined]
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pipe),
+            }
+        )
+    return _get_docling_converter._instance  # type: ignore[attr-defined]
+
+
+def _marker_config_kwargs() -> dict[str, object]:
+    """Return the standard marker config kwargs used by MarkerReader and ImageReader."""
+    return {
+        "output_format": "markdown",
+        "output_folder": None,
+        "langs": None,
+        "chunk_num": None,
+        "start_page": None,
+        "end_page": None,
+        "infer_format": False,
+        "infer_layout_format": False,
+        "force_gpu": 0,
+        "page_cache": None,
+        "workers": None,
+        "batch_multiplier": 1,
+        "disable_image_download": False,
+        "increase_resolution": False,
+        "crop_bboxes": None,
+        "renderer": "markdown",
+        "processors": None,
+        "llm_service": None,
+        "llm_service_config": None,
+        "high_table_noise": False,
+        "pdf_dpi": None,
+        "table_rec": False,
+        "equation_to_svg": False,
+        "equation_to_svg_chunk_memory": False,
+        "chat_client": None,
+        "chat_model": None,
+        "chat_model_api": None,
+        "handwriting": False,
+        "debug": False,
+        "output_schema": False,
+        "infer_line_groups": False,
+        "page_range": None,
+    }
 
 
 # ── Batch read ───────────────────────────────────────────────────────

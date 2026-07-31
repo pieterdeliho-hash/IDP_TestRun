@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from src.utils import validate_pdf_path
+from src.utils import _get_docling_converter, validate_pdf_path
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +28,12 @@ class HybridReader:
         """
         self._fallback_chars_per_page = fallback_chars_per_page
 
-    def read(self, file_path: str | Path) -> str:
+    def read(self, file_path: str | Path, *, use_ocr: bool = True) -> str:
         """Read a PDF using the hybrid approach.
 
         Args:
             file_path: Path to the PDF.
+            use_ocr:   Reserved for protocol compatibility (unused here).
 
         Returns:
             The extracted text from the best-suited reader.
@@ -49,7 +50,7 @@ class HybridReader:
         doc = fitz.open(str(path))
         page_texts: list[str] = []
         for page in doc:
-            page_texts.append(page.get_text())
+            page_texts.append(page.get_text("text"))
         doc.close()
 
         page_count = len(page_texts)
@@ -82,8 +83,6 @@ class HybridReader:
         _ensure_native_tools_on_path()
         os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
-        from docling.document_converter import DocumentConverter
-
-        converter = DocumentConverter()
-        result = converter.convert(str(path))
-        return result.document.export_to_markdown()
+        converter = _get_docling_converter()
+        result = converter.convert(str(path))  # type: ignore[attr-defined]
+        return result.document.export_to_markdown()  # type: ignore[no-any-return]

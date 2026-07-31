@@ -94,20 +94,28 @@ class TestReaderProtocol:
         """All reader classes conform to ReaderProtocol."""
         from src.docling_reader import DoclingReader
         from src.document_reader import PDFReader
+        from src.hybrid_reader import HybridReader
+        from src.image_reader import ImageReader
+        from src.marker_reader import MarkerReader
         from src.pdfplumber_reader import PdfPlumberReader
         from src.pymupdf_reader import PyMuPDFReader
+        from src.surya_reader import SuryaReader
         from src.unstructured_reader import UnstructuredReader
 
         # Static check: these assignments are valid because each class
-        # implements read(file_path: str | Path) -> str.
+        # implements read(file_path: str | Path, *, use_ocr: bool = True) -> str.
         readers: list[ReaderProtocol] = [
             PDFReader(),
             PyMuPDFReader(),
             PdfPlumberReader(),
             DoclingReader(),
             UnstructuredReader(),
+            HybridReader(),
+            SuryaReader(),
+            MarkerReader(),
+            ImageReader(),
         ]
-        assert len(readers) == 5
+        assert len(readers) == 9
 
 
 class TestBatchRead:

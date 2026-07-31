@@ -17,7 +17,7 @@ class TestImageReader:
         with pytest.raises(FileNotFoundError):
             reader.read("nonexistent.png")
 
-    def test_non_pdf_raises(self, reader: ImageReader, tmp_path: Path) -> None:
+    def test_unsupported_extension(self, reader: ImageReader, tmp_path: Path) -> None:
         fake = tmp_path / "file.txt"
         fake.write_text("hello")
         with pytest.raises(ValueError, match="Unsupported extension"):

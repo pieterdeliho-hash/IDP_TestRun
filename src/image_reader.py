@@ -5,7 +5,11 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from src.utils import _ensure_native_tools_on_path, validate_doc_path
+from src.utils import (
+    _ensure_native_tools_on_path,
+    _marker_config_kwargs,
+    validate_doc_path,
+)
 
 
 class ImageReader:
@@ -24,11 +28,12 @@ class ImageReader:
         """
         self._backend = backend
 
-    def read(self, file_path: str | Path) -> str:
+    def read(self, file_path: str | Path, *, use_ocr: bool = True) -> str:
         """Read an image and return its OCR text.
 
         Args:
             file_path: Path to the image file.
+            use_ocr:   Reserved for protocol compatibility (unused here).
 
         Returns:
             The extracted text.
@@ -65,8 +70,8 @@ class ImageReader:
         os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
         from PIL import Image  # noqa: PLC0415
-        from surya.inference import SuryaInferenceManager  # type: ignore[import-untyped]  # noqa: PLC0415
-        from surya.recognition import RecognitionPredictor  # type: ignore[import-untyped]  # noqa: PLC0415
+        from surya.inference import SuryaInferenceManager  # noqa: PLC0415
+        from surya.recognition import RecognitionPredictor  # noqa: PLC0415
 
         with Image.open(str(path)) as img:
             manager = SuryaInferenceManager()
@@ -85,9 +90,9 @@ class ImageReader:
         os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
         from PIL import Image  # noqa: PLC0415
-        from marker.config.parser import ConfigParser  # type: ignore[import-untyped]  # noqa: PLC0415
-        from marker.converters.pdf import PdfConverter  # type: ignore[import-untyped]  # noqa: PLC0415
-        from marker.models import create_model_dict  # type: ignore[import-untyped]  # noqa: PLC0415
+        from marker.config.parser import ConfigParser  # noqa: PLC0415
+        from marker.converters.pdf import PdfConverter  # noqa: PLC0415
+        from marker.models import create_model_dict  # noqa: PLC0415
 
         # Marker works on PDFs, so convert image to single-page PDF first
         import fitz  # noqa: PLC0415
@@ -110,41 +115,7 @@ class ImageReader:
 
         try:
             models = create_model_dict()
-            config_kwargs = {
-                "output_format": "markdown",
-                "output_folder": None,
-                "langs": None,
-                "chunk_num": None,
-                "start_page": None,
-                "end_page": None,
-                "infer_format": False,
-                "infer_layout_format": False,
-                "force_gpu": 0,
-                "page_cache": None,
-                "workers": None,
-                "batch_multiplier": 1,
-                "disable_image_download": False,
-                "increase_resolution": False,
-                "crop_bboxes": None,
-                "renderer": "markdown",
-                "processors": None,
-                "llm_service": None,
-                "llm_service_config": None,
-                "high_table_noise": False,
-                "pdf_dpi": None,
-                "table_rec": False,
-                "equation_to_svg": False,
-                "equation_to_svg_chunk_memory": False,
-                "chat_client": None,
-                "chat_model": None,
-                "chat_model_api": None,
-                "handwriting": False,
-                "debug": False,
-                "output_schema": False,
-                "infer_line_groups": False,
-                "page_range": None,
-            }
-            config_parser = ConfigParser(config_kwargs)
+            config_parser = ConfigParser(_marker_config_kwargs())
             config_dict = config_parser.generate_config_dict()
 
             converter = PdfConverter(

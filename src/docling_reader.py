@@ -4,19 +4,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.utils import validate_pdf_path
+from src.utils import _get_docling_converter, validate_pdf_path
 
 
 class DoclingReader:
     """Reads text from PDFs using the Docling document converter."""
 
-    _converter: object | None = None
-
-    def read(self, file_path: str | Path) -> str:
+    def read(self, file_path: str | Path, *, use_ocr: bool = True) -> str:
         """Read a PDF and return its full text as markdown.
 
         Args:
             file_path: Path to the PDF.
+            use_ocr:   Reserved for protocol compatibility (unused here).
 
         Returns:
             The extracted text (markdown format).
@@ -27,10 +26,6 @@ class DoclingReader:
         """
         path = validate_pdf_path(file_path)
 
-        from docling.document_converter import DocumentConverter
-
-        if DoclingReader._converter is None:
-            DoclingReader._converter = DocumentConverter()
-
-        result = DoclingReader._converter.convert(str(path))  # type: ignore[attr-defined]
+        converter = _get_docling_converter()
+        result = converter.convert(str(path))  # type: ignore[attr-defined]
         return result.document.export_to_markdown()  # type: ignore[no-any-return]

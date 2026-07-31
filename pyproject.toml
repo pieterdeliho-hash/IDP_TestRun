@@ -22,5 +22,7 @@ module = [
     "pdfplumber",
     "docling.*",
     "unstructured.*",
+    "surya.*",
+    "marker.*",
 ]
 ignore_missing_imports = true

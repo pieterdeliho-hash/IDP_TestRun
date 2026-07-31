@@ -15,11 +15,14 @@ class SuryaReader:
     word-level bounding boxes, and layout-aware text extraction.
     """
 
-    def read(self, file_path: str | Path) -> str:
+    _predictor: object | None = None
+
+    def read(self, file_path: str | Path, *, use_ocr: bool = True) -> str:
         """Read a PDF and return its full text content via Surya OCR.
 
         Args:
             file_path: Path to the PDF.
+            use_ocr:   Reserved for protocol compatibility (unused here).
 
         Returns:
             The extracted text.
@@ -36,7 +39,7 @@ class SuryaReader:
         from PIL import Image  # noqa: PLC0415
         import fitz  # noqa: PLC0415
 
-        from surya.recognition import RecognitionPredictor  # type: ignore[import-untyped]  # noqa: PLC0415
+        from surya.recognition import RecognitionPredictor  # noqa: PLC0415
 
         # Convert PDF pages to high-res images
         doc = fitz.open(str(path))
@@ -48,8 +51,10 @@ class SuryaReader:
         doc.close()
 
         # Run Surya OCR — manager=None uses pure ONNX models (no Docker/LLM needed)
-        predictor = RecognitionPredictor(manager=None)
-        page_results = predictor(images, full_page=True)
+        if SuryaReader._predictor is None:
+            SuryaReader._predictor = RecognitionPredictor(manager=None)
+
+        page_results = SuryaReader._predictor(images, full_page=True)  # type: ignore[operator]
 
         # Extract text from results
         lines: list[str] = []

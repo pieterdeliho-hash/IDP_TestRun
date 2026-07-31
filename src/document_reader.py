@@ -98,8 +98,10 @@ class PDFReader:
             thread_count=thread_count,
         )
 
+        # images covers pages min(page_indices)..max(page_indices) contiguously
+        offset = min(page_indices)
         for i, img in enumerate(images):
-            idx = page_indices[i]
+            idx = offset + i
             text = pytesseract.image_to_string(img, lang=self._ocr_lang)
             results[idx] = text.strip()
 
