@@ -1,0 +1,47 @@
+# ── Reader Configurations ──────────────────────────────────────────
+# Each top-level key is a preset.  Readers listed under `enabled`
+# will be loaded; omitted readers are skipped.
+
+defaults:
+  enabled:
+    - pymupdf
+    - pdfplumber
+    - docling
+    - hybrid
+  tesseract_cmd: null
+  ocr_lang: "eng"
+
+all:
+  enabled:
+    - pypdf+ocr
+    - pymupdf
+    - pdfplumber
+    - docling
+    - unstructured
+    - hybrid
+    - marker
+    - surya
+    - image+tesseract
+  tesseract_cmd: null
+
+speed:
+  enabled:
+    - pymupdf
+    - pypdf+ocr
+
+quality:
+  enabled:
+    - docling
+    - hybrid
+    - unstructured
+    - marker
+
+# ── Per-reader overrides ───────────────────────────────────────────
+
+reader_options:
+  pypdf+ocr:
+    ocr_lang: "eng"
+  hybrid:
+    fallback_chars_per_page: 50
+  image+tesseract:
+    backend: "tesseract"

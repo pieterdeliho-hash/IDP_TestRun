@@ -31,3 +31,7 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["src.gui"]
 disallow_subclassing_any = false
+
+[[tool.mypy.overrides]]
+module = ["idp_benchmark.prompts.*"]
+ignore_missing_imports = true

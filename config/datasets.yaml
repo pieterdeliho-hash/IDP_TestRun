@@ -1,0 +1,23 @@
+# ── Dataset Definitions ────────────────────────────────────────────
+# Add your own datasets here.  Each entry is a named path plus
+# optional metadata about document types.
+
+datasets:
+  test_fixtures:
+    path: "tests/fixtures"
+    description: "Built-in test PDFs (11 files)"
+    document_types:
+      - test
+
+  # Example: add your own dataset below
+  # invoices:
+  #   path: "data/invoices"
+  #   description: "Real-world invoice PDFs for IDP benchmarking"
+  #   document_types:
+  #     - invoice
+
+  # contracts:
+  #   path: "data/contracts"
+  #   description: "Multi-page contract documents"
+  #   document_types:
+  #     - contract
