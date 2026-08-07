@@ -4,9 +4,10 @@ Project-specific instructions for Claude Code working in this repository.
 
 ## Project Overview
 
-PDF reader for extracting text from both native-text and scanned (OCR) PDFs.
-Five backends: PyPDF+OCR, PyMuPDF, pdfplumber, Docling, unstructured.
+PDF and image reader for extracting text from native-text PDFs, scanned (OCR) PDFs, and images.
+Nine backends: PyPDF+OCR, PyMuPDF, pdfplumber, Docling, unstructured, hybrid, Surya, Marker, ImageReader.
 Benchmark tool compares all installed readers on speed and output quality.
+CustomTkinter GUI for interactive reading, comparison, batch extraction, and benchmarking.
 Python 3.11+, strict typing via mypy.
 
 ## Key Rules
@@ -43,3 +44,11 @@ python -m src.benchmark path/to/file.pdf
 python -m src.benchmark --batch path/to/pdfs
 python -m src.benchmark file.pdf --methods pypdf+ocr pymupdf
 ```
+
+## GUI
+
+```powershell
+python -m src.gui
+```
+
+Launches a CustomTkinter desktop app with four tabs: Read (single file), Compare (side-by-side), Batch extract, and Benchmark (with export).

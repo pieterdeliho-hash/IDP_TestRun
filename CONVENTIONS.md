@@ -46,11 +46,23 @@ src/
   pdfplumber_reader.py     # PdfPlumberReader
   docling_reader.py        # DoclingReader
   unstructured_reader.py   # UnstructuredReader
+  hybrid_reader.py         # HybridReader (pymupdf → docling OCR fallback)
+  surya_reader.py          # SuryaReader (pure ONNX OCR)
+  marker_reader.py         # MarkerReader (markdown + layout)
+  image_reader.py          # ImageReader (tesseract/surya/marker)
   benchmark.py             # Auto-discovers and compares all readers
-  utils.py                 # find_pdfs(), batch_read()
+  gui.py                   # CustomTkinter GUI (read, compare, batch, benchmark)
+  utils.py                 # find_pdfs(), batch_read(), ReaderProtocol
 tests/
   __init__.py
   test_document_reader.py
+  test_benchmark.py
+  test_hybrid_reader.py
+  test_surya_reader.py
+  test_marker_reader.py
+  test_image_reader.py
+  test_utils.py
+  test_idp_benchmark.py
 pyproject.toml             # mypy config (strict)
 requirements.txt
 CONVENTIONS.md
